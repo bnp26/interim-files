@@ -1,9 +1,11 @@
 import urllib3
-
-PROVIDER_PAYLOADS = {"ubereats": "uber_sample_payload_2.json", "deliverydudes": "deliverydudes_sample_1.json", "ontray": "ontray_sample_order_2.json", "allset": "allset_sample_order_3.json", "caternow": "caterNow_sample_order_1.json", "doordash": "doordash_sample_order_1.json", "opendining": "open_dining_sample_order_1.json"}
+import json
+from json_minify import json_minify
+PROVIDER_PAYLOADS = {"ubereats": "uber_sample_payload_1.json", "deliverydudes": "deliverydudes_sample_1.json", "ontray": "ontray_sample_order_2.json", "allset": "allset_sample_order_3.json", "caternow": "caterNow_sample_order_1.json", "doordash": "doordash_sample_order_1.json", "opendining": "open_dining_sample_order_1.json"}
 
 def get_oos_payloads():
     try:
+        import json
         payloads = {}
         for name in PROVIDER_PAYLOADS:
             payloads[name] = dict()
@@ -11,21 +13,29 @@ def get_oos_payloads():
             current["provider"] = name
             current["type"] = "oos"
             with open("../orders-endpoints/sample_json/" + PROVIDER_PAYLOADS[name], "r") as f:
-                payload = f.read()
+                payload = ""
+                for line in f.readlines():
+                    payload += line.replace("\n\t", "").strip()
                 current["payload"] = payload
+                payloads[name] = current
         return payloads
     except Exception as e:
         print e.message
-        return None
+
 def main():
     import urllib3
     import json
+
     http = urllib3.PoolManager()
     # lets seed some provider payloads
     payloads = get_oos_payloads()
+    print payloads
     for i in payloads:
         data = payloads[i]
-        encoded_data = json.dumps(data).encode('utf-8')
+        data["payload"] = json_minify(data["payload"])
+        data = json.dumps(payloads[i])
+        print 'minified: {}'.format(data)
+        encoded_data = data
         url = "https://ben-dot-ordermark-dashboard-service.appspot.com/api/payload/seed"
         headers ={
                 "Authorization": "Basic b3JkZXJtYXJrOm1vbmV5cHJpbnRpbmdtYWNoaW5l",
@@ -42,3 +52,4 @@ def main():
                 headers=headers)
         print resp.data
 main()
+
